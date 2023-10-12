@@ -9,17 +9,18 @@ import (
 )
 
 type Config struct {
-	GrafanaURL           url.URL       `env:"GRAFANA_SYNC_GRAFANA_URL,required"`
-	GrafanaUser          string        `env:"GRAFANA_SYNC_GRAFANA_USER,required"`
-	GrafanaPassword      string        `env:"GRAFANA_SYNC_GRAFANA_PASSWORD,required"`
-	AvanpostURL          url.URL       `env:"GRAFANA_SYNC_AVANPOST_URL,required"`
-	AvanpostUser         string        `env:"GRAFANA_SYNC_AVANPOST_USER,required"`
-	AvanpostPassword     string        `env:"GRAFANA_SYNC_AVANPOST_PASSWORD,required"`
-	AvanpostClientID     string        `env:"GRAFANA_SYNC_AVANPOST_CLIENT_ID,required"`
-	AvanpostClientSecret string        `env:"GRAFANA_SYNC_AVANPOST_CLIENT_SECRET,required"`
-	GroupRegexRO         string        `env:"GRAFANA_SYNC_GROUP_REGEX_RO,required"`
-	GroupRegexRW         string        `env:"GRAFANA_SYNC_GROUP_REGEX_RW,required"`
-	TimeRunSync          time.Duration `env:"GRAFANA_SYNC_TIME_RUN_SYNC,required"`
+	GrafanaURL           url.URL       `env:"GRAFANA_SYNC_GRAFANA_URL,notEmpty"`
+	GrafanaUser          string        `env:"GRAFANA_SYNC_GRAFANA_USER,notEmpty"`
+	GrafanaPassword      string        `env:"GRAFANA_SYNC_GRAFANA_PASSWORD,notEmpty"`
+	KeycloakURL          url.URL       `env:"GRAFANA_SYNC_KEYCLOAK_URL,notEmpty"`
+	KeycloakUser         string        `env:"GRAFANA_SYNC_KEYCLOAK_USER,notEmpty"`
+	KeycloakPassword     string        `env:"GRAFANA_SYNC_KEYCLOAK_PASSWORD,notEmpty"`
+	KeycloakClientID     string        `env:"GRAFANA_SYNC_KEYCLOAK_CLIENT_ID,notEmpty"`
+	KeycloakClientSecret string        `env:"GRAFANA_SYNC_KEYCLOAK_CLIENT_SECRET,notEmpty"`
+	GroupRegexRO         string        `env:"GRAFANA_SYNC_GROUP_REGEX_RO,notEmpty"`
+	GroupRegexRW         string        `env:"GRAFANA_SYNC_GROUP_REGEX_RW,notEmpty"`
+	TimeRunSync          time.Duration `env:"GRAFANA_SYNC_TIME_RUN_SYNC,notEmpty" envDefault:"20m"`
+	TimeRunDel           time.Duration `env:"GRAFANA_SYNC_TIME_RUN_DEL,notEmpty" envDefault:"30m"`
 }
 
 func InitConfig() *Config {

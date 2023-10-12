@@ -8,9 +8,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/rashaev/grafana-sync/internal/avanpost"
 	"github.com/rashaev/grafana-sync/internal/config"
 	"github.com/rashaev/grafana-sync/internal/grafana"
+	"github.com/rashaev/grafana-sync/internal/keycloak"
 	"github.com/rashaev/grafana-sync/internal/worker"
 )
 
@@ -27,11 +27,11 @@ func main() {
 
 	// Create timer for sync user task
 	timerSync := time.NewTimer(cfg.TimeRunSync)
-	// Create timer for delete task
-	timerDel := time.NewTimer(10 * time.Second)
+	// Create timer for removing user from Org task
+	timerDel := time.NewTimer(cfg.TimeRunDel)
 
-	// Init Avanpost client
-	avpClient, err := avanpost.New(serverCtx, cfg.AvanpostURL, cfg.AvanpostClientID, cfg.AvanpostClientSecret, cfg.AvanpostUser, cfg.AvanpostPassword)
+	// Init Keycloak client
+	kcloakClient, err := keycloak.New(serverCtx, cfg.KeycloakURL, cfg.KeycloakClientID, cfg.KeycloakClientSecret, cfg.KeycloakUser, cfg.KeycloakPassword)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -45,18 +45,19 @@ func main() {
 	for {
 		select {
 		case <-stopChan:
-			// Прерывание программы
 			log.Println("grafana-sync is stopped")
-			return
+			os.Exit(0)
 		case <-timerSync.C:
-			// Действия, выполняемые по истечении таймера
-			worker.SyncGroups(avpClient, grafanaClient, cfg.GroupRegexRO)
+			log.Println("started process of adding users to Orgs")
+			worker.SyncGroups(kcloakClient, grafanaClient, cfg.GroupRegexRO, "Viewer")
+			worker.SyncGroups(kcloakClient, grafanaClient, cfg.GroupRegexRW, "Editor")
 
 			// Сбрасываем и перезапускаем таймер
 			timerSync.Reset(cfg.TimeRunSync)
 		case <-timerDel.C:
-			worker.DeleteGrafanaUser(grafanaClient)
-			timerDel.Reset(10 * time.Second)
+			log.Println("started process of removing users from Orgs")
+			worker.RemoveFromOrg(kcloakClient, grafanaClient, cfg.GroupRegexRO, cfg.GroupRegexRW)
+			timerDel.Reset(cfg.TimeRunDel)
 		}
 	}
 }

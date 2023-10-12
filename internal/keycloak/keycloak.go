@@ -1,4 +1,4 @@
-package avanpost
+package keycloak
 
 import (
 	"context"
@@ -6,18 +6,17 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"regexp"
 
 	"golang.org/x/oauth2"
 )
 
-func New(ctx context.Context, url url.URL, clientid, clientsecret, username, password string) (*Avanpost, error) {
+func New(ctx context.Context, url url.URL, clientid, clientsecret, username, password string) (*Keycloak, error) {
 	conf := &oauth2.Config{
 		ClientID:     clientid,
 		ClientSecret: clientsecret,
 		Endpoint: oauth2.Endpoint{
-			AuthURL:  url.String() + "/oauth2/auth",
-			TokenURL: url.String() + "/oauth2/token",
+			AuthURL:  url.String() + "/realms/master/protocol/openid-connect/auth",
+			TokenURL: url.String() + "/realms/master/protocol/openid-connect/token",
 		},
 	}
 
@@ -28,7 +27,7 @@ func New(ctx context.Context, url url.URL, clientid, clientsecret, username, pas
 
 	client := conf.Client(ctx, token)
 
-	return &Avanpost{
+	return &Keycloak{
 		URL:          url,
 		Username:     username,
 		Password:     password,
@@ -38,8 +37,8 @@ func New(ctx context.Context, url url.URL, clientid, clientsecret, username, pas
 	}, nil
 }
 
-func (a *Avanpost) Groups(groupRegexp string) (MonitorGroups, error) {
-	req, err := http.NewRequest("GET", a.URL.String()+"/api/v1/groups?pageSize=1000", nil)
+func (a *Keycloak) Groups(groupRegexp string) ([]Group, error) {
+	req, err := http.NewRequest("GET", a.URL.String()+"/admin/realms/master/groups?max=1000&search="+groupRegexp, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -55,28 +54,19 @@ func (a *Avanpost) Groups(groupRegexp string) (MonitorGroups, error) {
 		return nil, err
 	}
 
-	var data GroupsInfo
+	var data []Group
 
 	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return nil, err
 	}
 
-	monitoringGroups := make(MonitorGroups)
-
-	re := regexp.MustCompile(groupRegexp)
-	for _, v := range data.Resources {
-		if re.MatchString(v.Name) {
-			monitoringGroups[v.ID] = v.Name
-		}
-
-	}
-	return monitoringGroups, nil
+	return data, nil
 
 }
 
-func (a *Avanpost) UsersInGroup(groupId string) ([]User, error) {
-	req, err := http.NewRequest("GET", a.URL.String()+"/api/v1/groups/"+groupId+"/users?pageSize=1000", nil)
+func (a *Keycloak) UsersInGroup(groupId string) ([]User, error) {
+	req, err := http.NewRequest("GET", a.URL.String()+"/admin/realms/master/groups/"+groupId+"/members?briefRepresentation=true&max=1000", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -92,16 +82,12 @@ func (a *Avanpost) UsersInGroup(groupId string) ([]User, error) {
 		return nil, err
 	}
 
-	var data UsersInfo
+	var data []User
 
 	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return nil, err
 	}
 
-	var users []User
-
-	users = append(users, data.Resources...)
-
-	return users, nil
+	return data, nil
 }
